@@ -73,7 +73,11 @@ impl Substitution {
             if !k.is_var() {
                 return Err(SubstitutionError::NotAVariable(k.clone()));
             }
-            if pool.sort(k) != pool.sort(v) {
+            let a = pool.sort(k);
+            let b = pool.sort(v);
+            println!("{:?} {:?}", k, a);
+            println!("{:?} {:?}", v, b);
+            if a != b {
                 return Err(SubstitutionError::DifferentSorts(k.clone(), v.clone()));
             }
         }
@@ -304,7 +308,7 @@ impl Substitution {
                 // If the binding list is a "sort" binding list, then `value` will be the variable's
                 // sort. Otherwise, we need to get the sort of `value`
                 let sort = if is_value_list {
-                    pool.add(Term::Sort(pool.sort(value).clone()))
+                    pool.add(pool.sort(value).as_ref().clone())
                 } else {
                     value.clone()
                 };

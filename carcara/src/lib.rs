@@ -189,12 +189,14 @@ pub fn check<T: io::BufRead>(
         {
             use crate::checker::Scheduler::Scheduler;
 
+            println!("THREAD");
             let (scheduler, schedule_context_usage) = Scheduler::new(num_threads, &proof);
             checker::ParallelProofChecker::new(pool, config, &prelude, &schedule_context_usage)
                 .check(&proof, &scheduler, checker_stats)
         }
         #[cfg(not(feature = "thread-safety"))]
         {
+            println!("NOT THREAD");
             checker::ProofChecker::new(&mut pool, config, prelude).check(&proof, checker_stats)
         }
     };

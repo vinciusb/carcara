@@ -466,9 +466,9 @@ impl Term {
     /// Returns the sort of this term. This does not make use of a cache --- if possible, prefer to
     /// use `TermPool::sort`.
     pub fn raw_sort(&self) -> Sort {
-        let mut pool = TermPool::new();
+        let mut pool = SingleThreadPool::TermPool::new();
         let added = pool.add(self.clone());
-        pool.sort(&added).clone()
+        pool.sort(&added).as_sort().unwrap().clone()
     }
 
     /// Returns `true` if the term is a terminal, that is, if it is a constant or a variable.
@@ -682,6 +682,8 @@ impl Rc<Term> {
         self.as_let()
             .ok_or_else(|| CheckerError::ExpectedLetTerm(self.clone()))
     }
+
+    // TODO: create a as_sort_err and return a result, an implement as_sort in `Term`
 }
 
 /// A constant term.

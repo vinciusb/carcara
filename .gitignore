@@ -1,2 +1,9 @@
 /target
 /benchmarks
+/.vscode/
+/scripts/teste.sh
+/scripts/fetch.sh
+/scripts/run_folder.sh
+/scripts/debug.patch
+/test-examples
+a.diff

@@ -65,7 +65,7 @@ pub mod SingleThreadContextStack {
             // we use the current state of the hash map to transform `(f y)` into `(f z)`. The
             // resulting hash map will then contain `(:= y z)` and `(:= x (f z))`
             for (var, value) in assignment_args.iter() {
-                let sort = Term::Sort(pool.sort(value).clone());
+                let sort = pool.sort(value).as_ref().clone();
                 let var_term = Term::new_var(var, pool.add(sort));
                 let var_term = pool.add(var_term);
                 substitution.insert(pool, var_term.clone(), value.clone())?;
@@ -76,7 +76,7 @@ pub mod SingleThreadContextStack {
             let mappings = assignment_args
                 .iter()
                 .map(|(var, value)| {
-                    let sort = Term::Sort(pool.sort(value).clone());
+                    let sort = pool.sort(value).as_ref().clone();
                     let var_term = (var.clone(), pool.add(sort)).into();
                     (pool.add(var_term), value.clone())
                 })
@@ -312,6 +312,9 @@ pub mod MultiThreadContextStack {
                             // arguments are in the correct order.
                             let mut substitution = Substitution::empty();
                             let mut substitution_until_fixed_point = Substitution::empty();
+                            // TODO: Lembrar de deixar a pool bloqueada durante todo esse bloco pra n dar chance de ficar nessa troca chata entre threads
+                            // let mut ctx_pool_guard = pool.ctx_pool.unwrap().write().unwrap();
+                            // let ctx_pool = &mut *ctx_pool_guard;
 
                             // We build the `substitution_until_fixed_point` hash map from the bottom up, by using the
                             // substitutions already introduced to transform the result of a new substitution before
@@ -320,7 +323,7 @@ pub mod MultiThreadContextStack {
                             // we use the current state of the hash map to transform `(f y)` into `(f z)`. The
                             // resulting hash map will then contain `(:= y z)` and `(:= x (f z))`
                             for (var, value) in assignment_args.iter() {
-                                let sort = Term::Sort(pool.sort(value).clone());
+                                let sort = pool.sort(value).as_ref().clone();
                                 let var_term = Term::new_var(var, pool.add(sort));
                                 let var_term = pool.add(var_term);
                                 substitution.insert(pool, var_term.clone(), value.clone())?;
@@ -331,7 +334,7 @@ pub mod MultiThreadContextStack {
                             let mappings = assignment_args
                                 .iter()
                                 .map(|(var, value)| {
-                                    let sort = Term::Sort(pool.sort(value).clone());
+                                    let sort = pool.sort(value).as_ref().clone();
                                     let var_term = (var.clone(), pool.add(sort)).into();
                                     (pool.add(var_term), value.clone())
                                 })
