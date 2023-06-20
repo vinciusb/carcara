@@ -22,6 +22,14 @@ pub trait TPool {
     /// just returns an `Rc` pointing to the existing allocation. This method also computes the
     /// term's sort, and adds it to the sort cache.
     fn add(&mut self, term: Term) -> Rc<Term>;
+    /// Takes a term and returns a possibly newly allocated `Rc` that references it.
+    ///
+    /// If the term was not originally in the term pool, it is added to it. Otherwise, this method
+    /// just returns an `Rc` pointing to the existing allocation. This method also computes the
+    /// term's sort, and adds it to the sort cache.
+    ///
+    /// This method should be used when the term to be added is needed to be shared between threads.
+    fn add_shared(&mut self, term: Term) -> Rc<Term>;
     /// Takes a vector of terms and calls [`TermPool::add`] on each.
     fn add_all(&mut self, terms: Vec<Term>) -> Vec<Rc<Term>>;
     /// Returns the sort of the given term.
@@ -198,6 +206,9 @@ pub mod SingleThreadPool {
             let term = Self::add_term_to_map(&mut self.terms, term);
             self.compute_sort(&term);
             term
+        }
+        fn add_shared(&mut self, term: Term) -> Rc<Term> {
+            self.add(term)
         }
 
         fn add_all(&mut self, terms: Vec<Term>) -> Vec<Rc<Term>> {
@@ -391,13 +402,38 @@ mod MultiThreadPool {
             if let Some(entry) = self.const_pool.terms.get(&term) {
                 entry.clone()
             }
-            else {
+            // If this term was inserted by the context
+            else if let Some(entry) = self.ctx_pool.read().unwrap().terms.get(&term) {
+                entry.clone()
+            } else {
                 match self.dyn_pool.terms.entry(term) {
                     Entry::Occupied(occupied_entry) => occupied_entry.get().clone(),
                     Entry::Vacant(vacant_entry) => {
                         let term = vacant_entry.key().clone();
                         let t = vacant_entry.insert(Rc::new(term)).clone();
                         self.dyn_pool.compute_sort(&t);
+                        t
+                    }
+                }
+            }
+        }
+
+        fn add_shared(&mut self, term: Term) -> Rc<Term> {
+            use std::collections::hash_map::Entry;
+
+            // If there is a constant pool and has the term
+            if let Some(entry) = self.const_pool.terms.get(&term) {
+                entry.clone()
+            }
+            // Check the context pool
+            else {
+                let mut ctx_pool_guard = self.ctx_pool.write().unwrap();
+                match ctx_pool_guard.terms.entry(term) {
+                    Entry::Occupied(occupied_entry) => occupied_entry.get().clone(),
+                    Entry::Vacant(vacant_entry) => {
+                        let term = vacant_entry.key().clone();
+                        let t = vacant_entry.insert(Rc::new(term)).clone();
+                        ctx_pool_guard.compute_sort(&t);
                         t
                     }
                 }
@@ -411,6 +447,10 @@ mod MultiThreadPool {
         fn sort(&self, term: &Rc<Term>) -> Rc<Term> {
             if let Some(sort) = self.const_pool.sorts_cache.get(term) {
                 sort.clone()
+            }
+            // A sort inserted by context
+            else if let Some(entry) = self.ctx_pool.read().unwrap().terms.get(&term) {
+                entry.clone()
             } else {
                 self.dyn_pool.sorts_cache[term].clone()
             }

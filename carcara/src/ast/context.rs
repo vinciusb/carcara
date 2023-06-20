@@ -312,6 +312,9 @@ pub mod MultiThreadContextStack {
                             // arguments are in the correct order.
                             let mut substitution = Substitution::empty();
                             let mut substitution_until_fixed_point = Substitution::empty();
+                            // TODO: Lembrar de deixar a pool bloqueada durante todo esse bloco pra n dar chance de ficar nessa troca chata entre threads
+                            // let mut ctx_pool_guard = pool.ctx_pool.write().unwrap();
+                            // let ctx_pool = &mut *ctx_pool_guard;
 
                             // We build the `substitution_until_fixed_point` hash map from the bottom up, by using the
                             // substitutions already introduced to transform the result of a new substitution before
@@ -321,8 +324,8 @@ pub mod MultiThreadContextStack {
                             // resulting hash map will then contain `(:= y z)` and `(:= x (f z))`
                             for (var, value) in assignment_args.iter() {
                                 let sort = pool.sort(value).as_ref().clone();
-                                let var_term = Term::new_var(var, pool.add(sort));
-                                let var_term = pool.add(var_term);
+                                let var_term = Term::new_var(var, pool.add_shared(sort));
+                                let var_term = pool.add_shared(var_term);
                                 substitution.insert(pool, var_term.clone(), value.clone())?;
                                 let new_value = substitution_until_fixed_point.apply(pool, value);
                                 substitution_until_fixed_point.insert(pool, var_term, new_value)?;
@@ -332,8 +335,8 @@ pub mod MultiThreadContextStack {
                                 .iter()
                                 .map(|(var, value)| {
                                     let sort = pool.sort(value).as_ref().clone();
-                                    let var_term = (var.clone(), pool.add(sort)).into();
-                                    (pool.add(var_term), value.clone())
+                                    let var_term = (var.clone(), pool.add_shared(sort)).into();
+                                    (pool.add_shared(var_term), value.clone())
                                 })
                                 .collect();
                             let bindings = variable_args.iter().cloned().collect();
