@@ -583,8 +583,7 @@ impl<'a, R: BufRead> Parser<'a, R> {
         let mut commands_stack = vec![Vec::new()];
         let mut end_step_stack = Vec::new();
         let mut subproof_args_stack = Vec::new();
-        let mut subproof_id_stack = Vec::new();
-        let mut last_subproof_id: i64 = -1;
+        let mut context_id: usize = 0;
 
         let mut finished_assumes = false;
 
@@ -622,8 +621,6 @@ impl<'a, R: BufRead> Parser<'a, R> {
                     commands_stack.push(Vec::new());
                     end_step_stack.push(anchor.end_step_id);
                     subproof_args_stack.push((anchor.assignment_args, anchor.variable_args));
-                    last_subproof_id += 1;
-                    subproof_id_stack.push(last_subproof_id as usize);
                     continue;
                 }
                 _ => return Err(Error::Parser(ParserError::UnexpectedToken(token), position)),
@@ -645,7 +642,6 @@ impl<'a, R: BufRead> Parser<'a, R> {
                 let commands = commands_stack.pop().unwrap();
                 end_step_stack.pop().unwrap();
                 let (assignment_args, variable_args) = subproof_args_stack.pop().unwrap();
-                let subproof_id = subproof_id_stack.pop().unwrap();
 
                 // The subproof must contain at least two commands: the end step and the previous
                 // command it implicitly references
@@ -674,8 +670,9 @@ impl<'a, R: BufRead> Parser<'a, R> {
                         commands,
                         assignment_args,
                         variable_args,
-                        context_id: subproof_id,
+                        context_id,
                     }));
+                context_id += 1;
             }
             self.state
                 .step_ids

@@ -33,13 +33,14 @@ impl<'c> ParallelProofChecker<'c> {
         pool: Arc<PrimitivePool>,
         config: Config,
         prelude: &'c ProblemPrelude,
+        context_usage: &Vec<usize>,
         stack_size: usize,
     ) -> Self {
         ParallelProofChecker {
             pool,
             config,
             prelude,
-            context: ContextStack::new(),
+            context: ContextStack::from_usage(context_usage),
             reached_empty_clause: false,
             is_holey: false,
             stack_size,
